@@ -28,3 +28,4 @@ onnxruntime==1.10.0
 # extras --------------------------------------
 thop  # FLOPS computation
 pycocotools>=2.0  # COCO mAP
+xtcocotools
