@@ -361,10 +361,11 @@ def test(data,
         maps[c] = ap[i]
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
 
+weights_path = "/home/ubuntu/yolov7_pytorch_pose/run_outputs/train/yolov7-w6-pose_experiment_mAP_0.54/weights/last.pt"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
-    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default=weights_path, help='model.pt path(s)')
     parser.add_argument('--data', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/coco_kpts.yaml', help='*.data path')  # og: data/coco128.yaml
     parser.add_argument('--batch-size', type=int, default=32, help='size of each image batch')
     parser.add_argument('--img-size', type=int, default=960, help='inference size (pixels)')
