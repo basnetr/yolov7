@@ -475,12 +475,12 @@ def train(hyp, opt, device, tb_writer=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='', help='initial weights path')  # og: yolov5s.pt  # later: weights/yolov7-w6-person.pt
-    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/cfg/yolov7-w6-pose.yaml', help='model.yaml path')  # og: ''
+    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/cfg/yolov7-w6-pose_small.yaml', help='model.yaml path')  # og: ''
     parser.add_argument('--data', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/coco_kpts.yaml', help='data.yaml path')  # og: data/coco128.yaml
     parser.add_argument('--hyp', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/hyp.pose.yaml', help='hyperparameters path')  # og: data/hyp.scratch.yaml
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=8, help='total batch size for all GPUs')  # og: 16
-    parser.add_argument('--img-size', nargs='+', type=int, default=[960, 960], help='[train, test] image sizes')  # og: [640, 640]
+    parser.add_argument('--img-size', nargs='+', type=int, default=[256, 256], help='[train, test] image sizes')  # og: [640, 640]
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
@@ -516,7 +516,7 @@ if __name__ == '__main__':
     opt.global_rank = int(os.environ['RANK']) if 'RANK' in os.environ else -1
     set_logging(opt.global_rank)
     if opt.global_rank in [-1, 0]:
-        check_git_status()
+        # check_git_status()
         check_requirements(requirements=f"/home/{uname}/yolov7_pytorch_pose/yolov7/requirements.txt", exclude=('pycocotools', 'thop'))
 
     # Resume
