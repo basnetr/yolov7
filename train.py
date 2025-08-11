@@ -4,6 +4,7 @@ import math
 import os
 import random
 import time
+import getpass
 from copy import deepcopy
 from pathlib import Path
 from threading import Thread
@@ -36,6 +37,7 @@ from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_di
 from utils.wandb_logging.wandb_utils import WandbLogger, check_wandb_resume
 
 logger = logging.getLogger(__name__)
+uname = getpass.getuser()
 
 
 def train(hyp, opt, device, tb_writer=None):
@@ -472,13 +474,13 @@ def train(hyp, opt, device, tb_writer=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='yolov5s.pt', help='initial weights path')
-    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
-    parser.add_argument('--data', type=str, default='data/coco128.yaml', help='data.yaml path')
-    parser.add_argument('--hyp', type=str, default='data/hyp.scratch.yaml', help='hyperparameters path')
+    parser.add_argument('--weights', type=str, default='', help='initial weights path')  # og: yolov5s.pt  # later: weights/yolov7-w6-person.pt
+    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/cfg/yolov7-w6-pose.yaml', help='model.yaml path')  # og: ''
+    parser.add_argument('--data', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/coco_kpts.yaml', help='data.yaml path')  # og: data/coco128.yaml
+    parser.add_argument('--hyp', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/hyp.pose.yaml', help='hyperparameters path')  # og: data/hyp.scratch.yaml
     parser.add_argument('--epochs', type=int, default=300)
-    parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
-    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='[train, test] image sizes')
+    parser.add_argument('--batch-size', type=int, default=8, help='total batch size for all GPUs')  # og: 16
+    parser.add_argument('--img-size', nargs='+', type=int, default=[960, 960], help='[train, test] image sizes')  # og: [640, 640]
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
@@ -492,12 +494,12 @@ if __name__ == '__main__':
     parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
     parser.add_argument('--single-cls', action='store_true', help='train multi-class data as single-class')
     parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
-    parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
+    parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode', default=True)  # added , default=True
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
     parser.add_argument('--workers', type=int, default=8, help='maximum number of dataloader workers')
-    parser.add_argument('--project', default='runs/train', help='save to project/name')
+    parser.add_argument('--project', default=f'/home/{uname}/yolov7_pytorch_pose/run_outputs/train', help='save to project/name')
     parser.add_argument('--entity', default=None, help='W&B entity')
-    parser.add_argument('--name', default='exp', help='save to project/name')
+    parser.add_argument('--name', default='yolov7-w6-pose', help='save to project/name')  # og: exp
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quad', action='store_true', help='quad dataloader')
     parser.add_argument('--linear-lr', action='store_true', help='linear LR')
@@ -506,7 +508,7 @@ if __name__ == '__main__':
     parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B')
     parser.add_argument('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch')
     parser.add_argument('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used')
-    parser.add_argument('--kpt-label', action='store_true', help='use keypoint labels for training')
+    parser.add_argument('--kpt-label', action='store_true', help='use keypoint labels for training', default=True)  # added default=True
     opt = parser.parse_args()
 
     # Set DDP variables
@@ -515,7 +517,7 @@ if __name__ == '__main__':
     set_logging(opt.global_rank)
     if opt.global_rank in [-1, 0]:
         check_git_status()
-        check_requirements(exclude=('pycocotools', 'thop'))
+        check_requirements(requirements=f"/home/{uname}/yolov7_pytorch_pose/yolov7/requirements.txt", exclude=('pycocotools', 'thop'))
 
     # Resume
     wandb_run = check_wandb_resume(opt)
@@ -555,10 +557,10 @@ if __name__ == '__main__':
     logger.info(opt)
     if not opt.evolve:
         tb_writer = None  # init loggers
-        if opt.global_rank in [-1, 0]:
-            prefix = colorstr('tensorboard: ')
-            logger.info(f"{prefix}Start with 'tensorboard --logdir {opt.project}', view at http://localhost:6006/")
-            tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
+        # if opt.global_rank in [-1, 0]:
+        #     prefix = colorstr('tensorboard: ')
+        #     logger.info(f"{prefix}Start with 'tensorboard --logdir {opt.project}', view at http://localhost:6006/")
+        #     tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
         train(hyp, opt, device, tb_writer)
 
     # Evolve hyperparameters (optional)
