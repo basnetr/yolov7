@@ -361,14 +361,14 @@ def test(data,
         maps[c] = ap[i]
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
 
-weights_path = "/home/ubuntu/yolov7_pytorch_pose/run_outputs/train/yolov7-w6-pose_experiment_mAP_0.54/weights/last.pt"
+weights_path = "/home/ubuntu/yolov7_pytorch_pose/run_outputs/train/yolov7-w6-pose_experiment2/weights/last.pt"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
     parser.add_argument('--weights', nargs='+', type=str, default=weights_path, help='model.pt path(s)')
     parser.add_argument('--data', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/coco_kpts.yaml', help='*.data path')  # og: data/coco128.yaml
     parser.add_argument('--batch-size', type=int, default=32, help='size of each image batch')
-    parser.add_argument('--img-size', type=int, default=960, help='inference size (pixels)')
+    parser.add_argument('--img-size', type=int, default=256, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.001, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS')
     parser.add_argument('--task', default='val', help='train, val, test, speed or study')
@@ -387,14 +387,14 @@ if __name__ == '__main__':
     parser.add_argument('--project', default=f'/home/{uname}/yolov7_pytorch_pose/run_outputs/test', help='save to project/name')
     parser.add_argument('--name', default='yolov7-w6-pose_experiment', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    parser.add_argument('--kpt-label', action='store_true', help='Whether kpt-label is enabled or not')
+    parser.add_argument('--kpt-label', action='store_true', default=True, help='Whether kpt-label is enabled or not')
     parser.add_argument('--flip-test', action='store_true', help='Whether to run flip_test or not')
     opt = parser.parse_args()
     opt.save_json |= opt.data.endswith('coco.yaml')
     opt.save_json_kpt |= opt.data.endswith('coco_kpts.yaml')
     opt.data = check_file(opt.data)  # check file
     print(opt)
-    check_requirements(exclude=('tensorboard', 'pycocotools', 'thop'))
+    # check_requirements(exclude=('tensorboard', 'pycocotools', 'thop'))
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         test(opt.data,
