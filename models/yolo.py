@@ -355,6 +355,52 @@ class Model(nn.Module):
         logger.info('')
 
     def forward(self, x, augment=False, profile=False):
+        import numpy as np
+        from PIL import Image
+        import os
+        import torch
+
+        def save_images(x, output_dir="/home/ubuntu/yolov7_pytorch_pose/debug_build_targets", prefix="image"):
+            """
+            Save each image in a batch tensor to a separate file.
+            
+            Args:
+                x: Tensor of shape [B, 3, H, W], normalized [0, 1] (PyTorch or TensorFlow).
+                output_dir: Directory to save images (default: /home/ubuntu/yolov7_pytorch_pose/debug_build_targets).
+                prefix: Prefix for filenames (default: 'image').
+            """
+            # Create output directory if it doesn't exist
+            os.makedirs(output_dir, exist_ok=True)
+
+            # Convert tensor to NumPy
+            if isinstance(x, torch.Tensor):
+                x = x.cpu().numpy()
+            elif isinstance(x, tf.Tensor):
+                x = x.numpy()
+            else:
+                raise ValueError("Input must be a PyTorch or TensorFlow tensor")
+
+            # Check shape
+            if len(x.shape) != 4 or x.shape[1] != 3:
+                raise ValueError(f"Expected shape [B, 3, H, W], got {x.shape}")
+
+            batch_size = x.shape[0]
+            
+            # Process each image
+            for i in range(batch_size):
+                # Extract single image [3, H, W]
+                img = x[i]
+                # Transpose to [H, W, 3] for PIL
+                img = np.transpose(img, (1, 2, 0))
+                # Denormalize to [0, 255] and convert to uint8
+                img = (img * 255).astype(np.uint8)
+                # Create PIL image
+                pil_img = Image.fromarray(img)
+                # Save image
+                filename = os.path.join(output_dir, f"{prefix}_{i}.png")
+                pil_img.save(filename)
+                print(f"Saved {filename}")
+        # save_images(x, output_dir="/home/ubuntu/yolov7_pytorch_pose/debug_build_targets", prefix="image")
         if augment:
             return self.forward_augment(x)  # augmented inference, None
         else:
