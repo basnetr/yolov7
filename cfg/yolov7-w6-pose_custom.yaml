@@ -4,7 +4,7 @@ nkpt: 17 # number of keypoints
 depth_multiple: 1.0  # model depth multiple
 width_multiple: 0.25  # layer channel multiple  # default 1.0
 dw_conv_kpt: True
-act: "ReLU"  # if not provided SiLU used - default this line commented
+# act: "ReLU"  # if not provided SiLU used - default this line commented
 
 anchors:
   - [ 19,27,  44,40,  38,94 ]  # P3/8

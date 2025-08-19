@@ -480,7 +480,7 @@ if __name__ == '__main__':
     parser.add_argument('--hyp', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/hyp.pose.yaml', help='hyperparameters path')  # og: data/hyp.scratch.yaml
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=8, help='total batch size for all GPUs')  # og: 16
-    parser.add_argument('--img-size', nargs='+', type=int, default=[256, 256], help='[train, test] image sizes')  # og: [640, 640]
+    parser.add_argument('--img-size', nargs='+', type=int, default=[320, 320], help='[train, test] image sizes')  # og: [640, 640]
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
