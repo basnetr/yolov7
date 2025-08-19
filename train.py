@@ -475,7 +475,7 @@ def train(hyp, opt, device, tb_writer=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='', help='initial weights path')  # og: yolov5s.pt  # later: weights/yolov7-w6-person.pt
-    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/cfg/yolov7-w6-pose_small.yaml', help='model.yaml path')  # og: ''
+    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/cfg/yolov7-w6-pose_custom.yaml', help='model.yaml path')  # og: ''
     parser.add_argument('--data', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/coco_kpts.yaml', help='data.yaml path')  # og: data/coco128.yaml
     parser.add_argument('--hyp', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/hyp.pose.yaml', help='hyperparameters path')  # og: data/hyp.scratch.yaml
     parser.add_argument('--epochs', type=int, default=300)
@@ -563,7 +563,7 @@ if __name__ == '__main__':
         #     tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
         train(hyp, opt, device, tb_writer)
 
-    # Evolve hyperparameters (optional)
+    # Evolve hyperparameters (optional) -- not run
     else:
         # Hyperparameter evolution metadata (mutation scale 0-1, lower_limit, upper_limit)
         meta = {'lr0': (1, 1e-5, 1e-1),  # initial learning rate (SGD=1E-2, Adam=1E-3)
