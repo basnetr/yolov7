@@ -216,7 +216,7 @@ class IKeypoint(nn.Module):
     stride = None  # strides computed during build
     export = False  # onnx export
 
-    def __init__(self, nc=80, anchors=(), nkpt=17, ch=(), inplace=True, dw_conv_kpt=False):  # detection layer
+    def __init__(self, nc=80, anchors=(), nkpt=17, ch=(), inplace=True, dw_conv_kpt=False, act=True):  # detection layer
         super(IKeypoint, self).__init__()
         self.nc = nc  # number of classes
         self.nkpt = nkpt
@@ -233,18 +233,18 @@ class IKeypoint(nn.Module):
         self.register_buffer('anchor_grid', a.clone().view(self.nl, 1, -1, 1, 1, 2))  # shape(nl,1,na,1,1,2)
         self.m = nn.ModuleList(nn.Conv2d(x, self.no_det * self.na, 1) for x in ch)  # output conv
         
-        self.ia = nn.ModuleList(ImplicitA(x) for x in ch)
-        self.im = nn.ModuleList(ImplicitM(self.no_det * self.na) for _ in ch)
+        # self.ia = nn.ModuleList(ImplicitA(x) for x in ch)
+        # self.im = nn.ModuleList(ImplicitM(self.no_det * self.na) for _ in ch)
         
         if self.nkpt is not None:
             if self.dw_conv_kpt: #keypoint head is slightly more complex
                 self.m_kpt = nn.ModuleList(
-                            nn.Sequential(DWConv(x, x, k=3), Conv(x,x),
-                                          DWConv(x, x, k=3), Conv(x, x),
-                                          DWConv(x, x, k=3), Conv(x,x),
-                                          DWConv(x, x, k=3), Conv(x, x),
-                                          DWConv(x, x, k=3), Conv(x, x),
-                                          DWConv(x, x, k=3), nn.Conv2d(x, self.no_kpt * self.na, 1)) for x in ch)
+                            nn.Sequential(DWConv(x, x, k=3, act=act), Conv(x,x, act=act),
+                                          DWConv(x, x, k=3, act=act), Conv(x, x, act=act),
+                                          DWConv(x, x, k=3, act=act), Conv(x,x, act=act),
+                                          DWConv(x, x, k=3, act=act), Conv(x, x, act=act),
+                                          DWConv(x, x, k=3, act=act), Conv(x, x, act=act),
+                                          DWConv(x, x, k=3, act=act), nn.Conv2d(x, self.no_kpt * self.na, 1)) for x in ch)
             else: #keypoint head is a single convolution
                 self.m_kpt = nn.ModuleList(nn.Conv2d(x, self.no_kpt * self.na, 1) for x in ch)
 
@@ -255,10 +255,16 @@ class IKeypoint(nn.Module):
         z = []  # inference output
         self.training |= self.export
         for i in range(self.nl):
+            # if self.nkpt is None or self.nkpt==0:
+            #     x[i] = self.im[i](self.m[i](self.ia[i](x[i])))  # conv
+            # else :
+            #     x[i] = torch.cat((self.im[i](self.m[i](self.ia[i](x[i]))), self.m_kpt[i](x[i])), axis=1)
+            
+            # remove implicit convs
             if self.nkpt is None or self.nkpt==0:
-                x[i] = self.im[i](self.m[i](self.ia[i](x[i])))  # conv
+                x[i] = self.m[i](x[i])  # conv
             else :
-                x[i] = torch.cat((self.im[i](self.m[i](self.ia[i](x[i]))), self.m_kpt[i](x[i])), axis=1)
+                x[i] = torch.cat((self.m[i](x[i]), self.m_kpt[i](x[i])), axis=1)
 
             bs, _, ny, nx = x[i].shape  # x(bs,255,20,20) to x(bs,3,20,20,85)
             x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
@@ -553,11 +559,14 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         elif m is Concat:
             c2 = sum([ch[x] for x in f])
         elif m in [Detect, IDetect, IKeypoint]:
+            args_dict = {}
             args.append([ch[x] for x in f])
             if isinstance(args[1], int):  # number of anchors
                 args[1] = [list(range(args[1] * 2))] * len(f)
             if 'dw_conv_kpt' in d.keys():
-                args_dict = {"dw_conv_kpt" : d['dw_conv_kpt']}
+                args_dict["dw_conv_kpt"] = d['dw_conv_kpt']
+            if 'act' in d.keys():
+                args_dict["act"] = d['act']
         elif m is ReOrg:
             c2 = ch[f] * 4
         elif m is Contract:

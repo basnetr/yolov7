@@ -361,7 +361,7 @@ def test(data,
         maps[c] = ap[i]
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
 
-weights_path = "/home/ubuntu/yolov7_pytorch_pose/run_outputs/train/yolov7-w6-pose_experiment2/weights/last.pt"
+weights_path = "/home/ubuntu/yolov7_pytorch_pose/run_outputs/train/yolov7-w6-pose_experiment3/weights/best.pt"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
