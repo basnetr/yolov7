@@ -475,9 +475,9 @@ def train(hyp, opt, device, tb_writer=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='', help='initial weights path')  # og: yolov5s.pt  # later: weights/yolov7-w6-person.pt
-    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/cfg/yolov7-w6-pose_custom.yaml', help='model.yaml path')  # og: ''
-    parser.add_argument('--data', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/coco_kpts.yaml', help='data.yaml path')  # og: data/coco128.yaml
-    parser.add_argument('--hyp', type=str, default=f'/home/{uname}/yolov7_pytorch_pose/yolov7/data/hyp.pose.yaml', help='hyperparameters path')  # og: data/hyp.scratch.yaml
+    parser.add_argument('--cfg', type=str, default=f'/home/{uname}/automltraining/yolov7/cfg/yolov7-w6-pose_custom.yaml', help='model.yaml path')  # og: ''
+    parser.add_argument('--data', type=str, default=f'/home/{uname}/automltraining/yolov7/data/coco_kpts.yaml', help='data.yaml path')  # og: data/coco128.yaml
+    parser.add_argument('--hyp', type=str, default=f'/home/{uname}/automltraining/yolov7/data/hyp.pose.yaml', help='hyperparameters path')  # og: data/hyp.scratch.yaml
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=8, help='total batch size for all GPUs')  # og: 16
     parser.add_argument('--img-size', nargs='+', type=int, default=[320, 320], help='[train, test] image sizes')  # og: [640, 640]
@@ -497,7 +497,7 @@ if __name__ == '__main__':
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode', default=True)  # added , default=True
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
     parser.add_argument('--workers', type=int, default=8, help='maximum number of dataloader workers')
-    parser.add_argument('--project', default=f'/home/{uname}/yolov7_pytorch_pose/run_outputs/train', help='save to project/name')
+    parser.add_argument('--project', default=f'/home/{uname}/automltraining/yolov7_run_outputs/train', help='save to project/name')
     parser.add_argument('--entity', default=None, help='W&B entity')
     parser.add_argument('--name', default='yolov7-w6-pose_experiment', help='save to project/name')  # og: exp
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
