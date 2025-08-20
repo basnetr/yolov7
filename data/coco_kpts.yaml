@@ -2,7 +2,7 @@
 train: /opt/dlami/nvme/pose/coco/train2017.txt  # 118287 images
 val: /opt/dlami/nvme/pose/coco/val2017.txt  # 5000 images
 #val: /user/a0132471/Files/bit-bucket/pytorch/jacinto-ai-pytest/data/results/datasets/pytorch_coco_mmdet_img_resize640_val2017_5k_yolov5.txt
-test: /opt/dlami/nvme/pose/coco/test-dev2017.txt  # 20288 of 40670 images, submit to https://competitions.codalab.org/competitions/20794
+# test: /opt/dlami/nvme/pose/coco/test-dev2017.txt  # 20288 of 40670 images, submit to https://competitions.codalab.org/competitions/20794
 
 # number of classes
 nc: 1

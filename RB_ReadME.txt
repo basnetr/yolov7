@@ -17,6 +17,7 @@ Data prep:
 To prepare dataset for keypoints -- update get_coco.sh file based as you need
 bash /home/ubuntu/yolov7_pytorch_pose/yolov7/data/scripts/get_coco.sh
 
+Before train change settings like data: /home/ubuntu/automltraining/yolov7/data/coco_kpts.yaml
 Train:
 python train.py
 

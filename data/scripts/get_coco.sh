@@ -32,11 +32,11 @@ for f in $f1 $f2; do
 done
 wait # finish background tasks
 
-# rename keypoints labels and files - remove suffix if you want to use full dataset
-mv /opt/dlami/nvme/pose/coco/train2017.txt /opt/dlami/nvme/pose/coco/train2017.txt_full_dataset_keypoints
-mv /opt/dlami/nvme/pose/coco/val2017.txt /opt/dlami/nvme/pose/coco/val2017.txt_full_dataset_keypoints
+# # rename keypoints labels and files - remove suffix if you want to use full dataset
+# mv /opt/dlami/nvme/pose/coco/train2017.txt /opt/dlami/nvme/pose/coco/train2017.txt_full_dataset_keypoints
+# mv /opt/dlami/nvme/pose/coco/val2017.txt /opt/dlami/nvme/pose/coco/val2017.txt_full_dataset_keypoints
 
-# comment this if you want to use full dataset
-# prepare small sample dataset
-cp /home/ubuntu/yolov7_pytorch_pose/yolov7/data/train2017.txt /opt/dlami/nvme/pose/coco/train2017.txt
-cp /home/ubuntu/yolov7_pytorch_pose/yolov7/data/test2017.txt /opt/dlami/nvme/pose/coco/val2017.txt
+# # comment this if you want to use full dataset
+# # prepare small sample dataset
+# cp /home/ubuntu/yolov7_pytorch_pose/yolov7/data/train2017.txt /opt/dlami/nvme/pose/coco/train2017.txt
+# cp /home/ubuntu/yolov7_pytorch_pose/yolov7/data/test2017.txt /opt/dlami/nvme/pose/coco/val2017.txt
