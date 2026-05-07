@@ -18,6 +18,62 @@ from utils.plots import plot_images, output_to_target, plot_study_txt
 from utils.torch_utils import select_device, time_synchronized, TracedModel
 
 
+def calculate_per_class_coco_metrics(coco_eval, label_names=None):
+    """Extract per-class COCO AP/AR metrics from a COCOeval (or fasterCOCOeval) object.
+    `coco_eval` must have had accumulate() called.
+    Returns a dict-of-dicts: metric_name -> {class_name: value}.
+    """
+    precision = coco_eval.eval["precision"]  # [T, R, K, A, M]
+    recall = coco_eval.eval["recall"]  # [T, K, A, M]
+    cat_ids = coco_eval.params.catIds
+    label_names = label_names if label_names is not None else [str(c) for c in cat_ids]
+
+    m_idx_max = precision.shape[4] - 1
+    m_idx_1 = 0
+    m_idx_10 = 1 if precision.shape[4] > 1 else m_idx_max
+
+    num_areas = precision.shape[3]
+    if num_areas == 4:
+        a_idx_s, a_idx_m, a_idx_l = 1, 2, 3
+    else:
+        a_idx_s, a_idx_m, a_idx_l = 0, 1, 2
+
+    keys = [
+        'coco_ap_at_50', 'coco_ap_at_75', 'coco_ap',
+        'coco_ap_small', 'coco_ap_medium', 'coco_ap_large',
+        'coco_ar_1', 'coco_ar_10', 'coco_ar',
+        'coco_ar_small', 'coco_ar_medium', 'coco_ar_large',
+    ]
+    out = {k: {} for k in keys}
+
+    for idx, class_name in enumerate(label_names):
+        def get_ap(t_slice, a_idx, m_idx):
+            s = precision[t_slice, :, idx, a_idx, m_idx]
+            s = s[s > -1]
+            return float(np.mean(s)) if s.size > 0 else 0.0
+
+        def get_ar(t_slice, a_idx, m_idx):
+            s = recall[t_slice, idx, a_idx, m_idx]
+            s = s[s > -1]
+            return float(np.mean(s)) if s.size > 0 else 0.0
+
+        out['coco_ap'][class_name] = get_ap(slice(None), 0, m_idx_max)
+        out['coco_ap_at_50'][class_name] = get_ap(0, 0, m_idx_max)
+        out['coco_ap_at_75'][class_name] = get_ap(5, 0, m_idx_max)
+        out['coco_ap_small'][class_name] = get_ap(slice(None), a_idx_s, m_idx_max)
+        out['coco_ap_medium'][class_name] = get_ap(slice(None), a_idx_m, m_idx_max)
+        out['coco_ap_large'][class_name] = get_ap(slice(None), a_idx_l, m_idx_max)
+
+        out['coco_ar_1'][class_name] = get_ar(slice(None), 0, m_idx_1)
+        out['coco_ar_10'][class_name] = get_ar(slice(None), 0, m_idx_10)
+        out['coco_ar'][class_name] = get_ar(slice(None), 0, m_idx_max)
+        out['coco_ar_small'][class_name] = get_ar(slice(None), a_idx_s, m_idx_max)
+        out['coco_ar_medium'][class_name] = get_ar(slice(None), a_idx_m, m_idx_max)
+        out['coco_ar_large'][class_name] = get_ar(slice(None), a_idx_l, m_idx_max)
+
+    return out
+
+
 def test(data,
          weights=None,
          batch_size=32,
@@ -94,6 +150,7 @@ def test(data,
         print("Testing with YOLOv5 AP metric...")
     
     seen = 0
+    per_class_metrics = None
     confusion_matrix = ConfusionMatrix(nc=nc)
     names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
     coco91class = coco80_to_coco91_class()
@@ -273,6 +330,37 @@ def test(data,
             eval.accumulate()
             eval.summarize()
             map, map50 = eval.stats[:2]  # update results (mAP@0.5:0.95, mAP@0.5)
+
+            # Per-class COCO metrics
+            try:
+                cat_names = [c['name'] for c in anno.loadCats(eval.params.catIds)]
+            except Exception:
+                cat_names = None
+            per_class = calculate_per_class_coco_metrics(eval, label_names=cat_names)
+            per_class_metrics = per_class
+            metric_keys = ['coco_ap', 'coco_ap_at_50', 'coco_ap_at_75',
+                           'coco_ap_small', 'coco_ap_medium', 'coco_ap_large',
+                           'coco_ar_1', 'coco_ar_10', 'coco_ar',
+                           'coco_ar_small', 'coco_ar_medium', 'coco_ar_large']
+            short = {'coco_ap': 'AP', 'coco_ap_at_50': 'AP50', 'coco_ap_at_75': 'AP75',
+                     'coco_ap_small': 'AP_S', 'coco_ap_medium': 'AP_M', 'coco_ap_large': 'AP_L',
+                     'coco_ar_1': 'AR_1', 'coco_ar_10': 'AR_10', 'coco_ar': 'AR',
+                     'coco_ar_small': 'AR_S', 'coco_ar_medium': 'AR_M', 'coco_ar_large': 'AR_L'}
+            print('\nPer-class COCO metrics:')
+            header = f"{'Class':<22}" + ''.join(f"{short[k]:>8}" for k in metric_keys)
+            print(header)
+            for name in per_class['coco_ap']:
+                row = f"{name:<22}" + ''.join(f"{per_class[k][name]:>8.3f}" for k in metric_keys)
+                print(row)
+            print('-' * len(header))
+            means = [sum(per_class[k].values()) / len(per_class[k]) if per_class[k] else 0.0
+                     for k in metric_keys]
+            print(f"{'mean (all classes)':<22}" + ''.join(f"{m:>8.3f}" for m in means))
+
+            per_class_json = save_dir / 'per_class_coco_metrics.json'
+            with open(per_class_json, 'w') as f:
+                json.dump(per_class, f, indent=2)
+            print(f'\nPer-class COCO metrics saved to {per_class_json}')
         except Exception as e:
             print(f'pycocotools unable to run: {e}')
 
@@ -284,7 +372,131 @@ def test(data,
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
-    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
+    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t, per_class_metrics
+
+def run(
+    data='data/coco.yaml',
+    weights='yolov7.pt',
+    batch_size=32,
+    img_size=640,
+    conf_thres=0.001,
+    iou_thres=0.65,
+    task='val',
+    device='0',
+    single_cls=False,
+    augment=False,
+    verbose=False,
+    save_txt=False,
+    save_hybrid=False,
+    save_conf=False,
+    save_json=None,
+    project='runs/test',
+    name='yolov7_640_val',
+    exist_ok=False,
+    no_trace=False,
+    v5_metric=False,
+):
+    global opt
+
+    if isinstance(weights, str):
+        weights = [weights]
+
+    opt = argparse.Namespace(
+        weights=weights,
+        data=data,
+        batch_size=batch_size,
+        img_size=img_size,
+        conf_thres=conf_thres,
+        iou_thres=iou_thres,
+        task=task,
+        device=device,
+        single_cls=single_cls,
+        augment=augment,
+        verbose=verbose,
+        save_txt=save_txt,
+        save_hybrid=save_hybrid,
+        save_conf=save_conf,
+        save_json=save_json if save_json is not None else data.endswith('coco.yaml'),
+        project=project,
+        name=name,
+        exist_ok=exist_ok,
+        no_trace=no_trace,
+        v5_metric=v5_metric,
+    )
+
+    opt.data = check_file(opt.data)
+
+    print(opt)
+
+    if opt.task in ('train', 'val', 'test'):
+        return test(
+            opt.data,
+            opt.weights,
+            opt.batch_size,
+            opt.img_size,
+            opt.conf_thres,
+            opt.iou_thres,
+            opt.save_json,
+            opt.single_cls,
+            opt.augment,
+            opt.verbose,
+            save_txt=opt.save_txt or opt.save_hybrid,
+            save_hybrid=opt.save_hybrid,
+            save_conf=opt.save_conf,
+            trace=not opt.no_trace,
+            v5_metric=opt.v5_metric,
+        )
+
+    elif opt.task == 'speed':
+        results = []
+        for w in opt.weights:
+            results.append(
+                test(
+                    opt.data,
+                    w,
+                    opt.batch_size,
+                    opt.img_size,
+                    0.25,
+                    0.45,
+                    save_json=False,
+                    plots=False,
+                    v5_metric=opt.v5_metric,
+                )
+            )
+        return results
+
+    elif opt.task == 'study':
+        x = list(range(256, 1536 + 128, 128))
+        all_results = []
+
+        for w in opt.weights:
+            f = f'study_{Path(opt.data).stem}_{Path(w).stem}.txt'
+            y = []
+
+            for i in x:
+                print(f'\nRunning {f} point {i}...')
+                r, _, t, _ = test(
+                    opt.data,
+                    w,
+                    opt.batch_size,
+                    i,
+                    opt.conf_thres,
+                    opt.iou_thres,
+                    opt.save_json,
+                    plots=False,
+                    v5_metric=opt.v5_metric,
+                )
+                y.append(r + t)
+
+            np.savetxt(f, y, fmt='%10.4g')
+            all_results.append((f, y))
+
+        os.system('zip -r study.zip study_*.txt')
+        plot_study_txt(x=x)
+        return all_results
+
+    else:
+        raise ValueError(f"Unsupported task: {opt.task}")
 
 
 if __name__ == '__main__':
@@ -345,9 +557,60 @@ if __name__ == '__main__':
             y = []  # y axis
             for i in x:  # img-size
                 print(f'\nRunning {f} point {i}...')
-                r, _, t = test(opt.data, w, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json,
+                r, _, t, _ = test(opt.data, w, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json,
                                plots=False, v5_metric=opt.v5_metric)
                 y.append(r + t)  # results and times
             np.savetxt(f, y, fmt='%10.4g')  # save
         os.system('zip -r study.zip study_*.txt')
         plot_study_txt(x=x)  # plot
+
+
+# using run:
+
+# if __name__ == '__main__':
+#     parser = argparse.ArgumentParser(prog='test.py')
+#     parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
+#     parser.add_argument('--data', type=str, default='data/coco.yaml', help='*.data path')
+#     parser.add_argument('--batch-size', type=int, default=32, help='size of each image batch')
+#     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
+#     parser.add_argument('--conf-thres', type=float, default=0.001, help='object confidence threshold')
+#     parser.add_argument('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS')
+#     parser.add_argument('--task', default='val', help='train, val, test, speed or study')
+#     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+#     parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
+#     parser.add_argument('--augment', action='store_true', help='augmented inference')
+#     parser.add_argument('--verbose', action='store_true', help='report mAP by class')
+#     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
+#     parser.add_argument('--save-hybrid', action='store_true', help='save label+prediction hybrid results to *.txt')
+#     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
+#     parser.add_argument('--save-json', action='store_true', help='save a cocoapi-compatible JSON results file')
+#     parser.add_argument('--project', default='runs/test', help='save to project/name')
+#     parser.add_argument('--name', default='exp', help='save to project/name')
+#     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+#     parser.add_argument('--no-trace', action='store_true', help='don`t trace model')
+#     parser.add_argument('--v5-metric', action='store_true', help='assume maximum recall as 1.0 in AP calculation')
+
+#     args = parser.parse_args()
+
+#     run(
+#         weights=args.weights,
+#         data=args.data,
+#         batch_size=args.batch_size,
+#         img_size=args.img_size,
+#         conf_thres=args.conf_thres,
+#         iou_thres=args.iou_thres,
+#         task=args.task,
+#         device=args.device,
+#         single_cls=args.single_cls,
+#         augment=args.augment,
+#         verbose=args.verbose,
+#         save_txt=args.save_txt,
+#         save_hybrid=args.save_hybrid,
+#         save_conf=args.save_conf,
+#         save_json=args.save_json or args.data.endswith('coco.yaml'),
+#         project=args.project,
+#         name=args.name,
+#         exist_ok=args.exist_ok,
+#         no_trace=args.no_trace,
+#         v5_metric=args.v5_metric,
+#     )
